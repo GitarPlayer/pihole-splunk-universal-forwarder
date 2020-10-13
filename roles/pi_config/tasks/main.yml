@@ -1,0 +1,29 @@
+--- 
+  - 
+    apt: 
+      update_cache: true
+      upgrade: safe
+    name: "Update APT package cache"
+  - 
+    copy: "src=./files/raspi-blacklist.conf dest=/etc/modprobe.d/raspi-blacklist.conf mode=0600"
+    name: "Disable WIFI and Bluetooth"
+  - 
+    apt: 
+      pkg: 
+        - ntp
+        - python3-pip
+      state: present
+    name: "Install NTP"
+  - 
+    name: "Copy over the NTP configuration"
+    notify: 
+      - "restart ntp"
+      - "force ntp update"
+    template: "src=files/ntp.conf dest=/etc/ntp.conf"
+  - 
+    name: "Make sure NTP is started up"
+    service: "name=ntp state=started enabled=yes"
+  - 
+    become: true
+    name: "Set static IP configuration"
+    template: "src=\"templates/etc_network_interfaces.j2\" dest=\"/etc/network/interfaces\" owner=root group=root mode=0644"

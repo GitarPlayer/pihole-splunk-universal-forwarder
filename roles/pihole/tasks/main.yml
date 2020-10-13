@@ -1,0 +1,67 @@
+---
+
+
+
+- name: Create pihole user
+  user:
+    name: "{{ user_pihole }}"
+
+- name: Create pihole configuration directory
+  become: True
+  file:
+    name="{{ fspath_pihole_config }}"
+    state=directory
+    owner="{{ user_pihole }}"
+    group="{{ group_pihole }}"
+    mode=0755
+
+- name: Create pihole configuration
+  become: True
+  template:
+    src="setupVars.conf.j2"
+    dest="{{ fspath_pihole_config }}/setupVars.conf"
+    owner=root
+    group=root
+    mode=0644
+
+- name: download install script
+  get_url:
+    url: https://raw.githubusercontent.com/pi-hole/pi-hole/master/automated%20install/basic-install.sh
+    dest: /etc/pihole-install.sh
+    mode: u+rwx
+
+- name: Do not install Web Interface
+  lineinfile:
+    path: /etc/pihole-install.sh
+    regexp: '^INSTALL_WEB_INTERFACE=true'
+    line: INSTALL_WEB_INTERFACE=false
+
+- name: Run unattended
+  lineinfile:
+    path: /etc/pihole-install.sh
+    regexp: '^runUnattended=false'
+    line: runUnattended=true
+
+- name: Do not install Web server
+  lineinfile:
+    path: /etc/pihole-install.sh
+    regexp: '^INSTALL_WEB_SERVER=true'
+    line: INSTALL_WEB_SERVER=false
+      
+- name: reconfigure
+  lineinfile:
+    path: /etc/pihole-install.sh
+    regexp: '^reconfigure=false'
+    line: reconfigure=true
+
+- name: run installer
+  become: True
+  args:
+    chdir: /etc
+  shell: /etc/pihole-install.sh >> /etc/unattended
+
+
+- name: "Set default DNS"
+  become: true
+  template: "src=\"templates/etc_resolf.conf.j2\" dest=\"/etc/resolv.conf\" owner=root group=root mode=0644"
+  

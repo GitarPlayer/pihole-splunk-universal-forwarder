@@ -1,0 +1,113 @@
+---
+
+
+
+    - name: download the universal forwarder package from Splunk
+      get_url:
+        url: https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=ARM&platform=linux&version=8.0.6&product=universalforwarder&filename=splunkforwarder-8.0.6-152fb4b2bb96-Linux-arm.tgz&wget=true
+        dest: /etc/8.0.6-152fb4b2bb96-Linux-arm.tgz 
+        mode: '0755'
+
+    - name: Recursively remove opt/splunkforwarder to avoid installation issues
+      file:
+        path: /opt/splunkforwarder
+        state: absent  
+      
+    - name: installs the Splunk forwarder in the /opt directory
+      unarchive:
+        src: /etc/8.0.6-152fb4b2bb96-Linux-arm.tgz 
+        dest: /opt
+        remote_src: yes
+
+    - name: install the splunkclouduf.splunk
+      copy:
+        src: files/splunkclouduf.spl
+        dest: /etc
+
+    - name: download the universal forwarder package from Splunk
+      get_url:
+        url: https://bootstrap.pypa.io/get-pip.py 
+        dest: /etc/get-pip.py
+        mode: '0755'
+      
+    - name: Install pexpect python package
+      pip: 
+        name: 
+          - setuptools
+          - pexpect
+
+    - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config
+      blockinfile:
+        create: yes
+        path: /opt/splunkforwarder/etc/system/local/user-seed.conf
+        block: |
+          [user_info]
+          USERNAME = sc_admin
+          PASSWORD = Welcome20
+
+    - name: setups the admin account
+      become: True
+      args:
+        chdir: /opt/splunkforwarder/bin
+      expect:
+        command: ./splunk start --accept-license --answer-yes --auto-ports --no-prompt 
+        responses:
+          Question:
+            - sc_admin
+            - Welcome20
+            - Welcome20
+
+    - name: enable the linux app
+      become: True
+      args:
+        chdir: /opt/splunkforwarder/bin
+      expect:
+        command: /opt/splunkforwarder/bin/splunk install app /etc/splunkclouduf.spl
+        responses:
+          'Splunk username:': 'sc_admin'
+          'Password:': 'Welcome20'
+
+    - name: Reset the forwarder after install
+      become: True
+      shell: ./splunk restart
+      args:
+        chdir: /opt/splunkforwarder/bin
+
+    - name: install the splunk-add-on-for-unix-and-linux_820.tgz
+      unarchive:
+        src: files/splunk-add-on-for-unix-and-linux_820.tgz
+        dest: /opt/splunkforwarder/etc/apps/
+
+
+    - name: create local dir in /opt/splunkforwarder/etc/apps/Splunk_TA_nix
+      file:
+        path: /opt/splunkforwarder/etc/apps/Splunk_TA_nix/local
+        state: directory
+
+    - name: copy files from default/inputs.conf to local directory
+      copy:
+        src: /opt/splunkforwarder/etc/apps/Splunk_TA_nix/default/inputs.conf
+        dest: /opt/splunkforwarder/etc/apps/Splunk_TA_nix/local/inputs.conf
+        remote_src: yes
+        
+    - name: Add SPLUNK_HOME to env var
+      lineinfile:
+        path: /etc/profile    
+        line: export SPLUNK_HOME=/opt/splunkforwarder
+
+    - name: enable the linux app
+      become: True
+      args:
+        chdir: /opt/splunkforwarder/bin
+      expect:
+        command: ./splunk add monitor /var/log/pihole.log
+        responses:
+          'Splunk username:': 'sc_admin'
+          'Password:': 'Welcome20'
+    
+    - name: Reset the forwarder and the logs will get sent
+      become: True
+      shell: ./splunk restart
+      args:
+        chdir: /opt/splunkforwarder/bin
+    

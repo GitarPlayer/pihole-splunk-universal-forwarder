@@ -1,0 +1,11 @@
+---
+
+    - name: Ansible Playbook for configuring Pihole, NTP and an universal plunk forwarder
+      hosts: pis
+      roles:
+        # - pi_config
+        # - pihole
+        # - universal_forwarder
+        - pi_harden
+      remote_user: pi
+      become: yes
