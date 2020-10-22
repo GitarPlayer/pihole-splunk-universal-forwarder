@@ -1,6 +1,12 @@
 # Page Disambiguation
 
-This ReadMe descripes the content of this repo. Needed dependencies and things to watch out for mainly.
+This ReadMe descripes the content of this repo. Needed dependencies and things to watch out for mainly.  
+
+# Architecture
+
+![architecture image](architecture.png)
+
+We have two raspberry pi with Pi hole and the Splunk Universal Forwarder installed. Pi hole will do DNS ad blocking and the universal forwarder will forward the Pi hole logs to a Splunk cloud instance.
 
 ## Dependencies
 - [ ] Raspberry Pi with fixed IP through DHCP (configure this on your router MAC based)
